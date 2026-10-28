@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+// ★ DBファサードの代わりにProductモデルをメインで使うようになります
 use App\Models\Product;
 use App\Models\Vendor;
 use App\Http\Requests\ProductStoreRequest;
@@ -11,12 +11,13 @@ use App\Http\Requests\ProductStoreRequest;
 class ProductController extends Controller {
 
     public function index(Request $request) {
-        //  一覧画面用のバリデーションを追加
+        // 一覧画面用のバリデーションを追加
         $request->validate([
             'sort' => 'nullable|in:asc,desc,created_at_desc,updated_at_desc',
         ]);
-        // クエリビルダのインスタンスを作成
-        $query = DB::table('products');
+
+        // ★重要：DB::table() ではなく、Product::query() を使うことで論理削除が自動で効くようになります
+        $query = Product::query();
 
         // ① 条件で絞り込み（商品名の部分一致検索）
         if ($request->filled('keyword')) {
@@ -28,7 +29,7 @@ class ProductController extends Controller {
         if ($request->filled('sort')) {
             $sort = $request->input('sort');
             
-            //  ユーザーの選択に応じて、並び替えるカラムと順序を切り替えます
+            // ユーザーの選択に応じて、並び替えるカラムと順序を切り替えます
             switch ($sort) {
                 case 'asc':
                     $query->orderBy('price', 'asc'); // 価格の安い順
@@ -48,10 +49,14 @@ class ProductController extends Controller {
             $query->orderBy('created_at', 'asc');
         }
 
-        // 最終的なクエリを実行してデータを取得
+        // 最終的なクエリを実行してデータを取得（自動的に削除されたデータが除外されます）
         $products = $query->get();
 
-        return view('products.index', compact('products'));
+        // ★【ここを追記】論理削除された（ゴミ箱に入っている）データだけを別途取得する
+        $trashed_products = Product::onlyTrashed()->get();
+
+        // ★ viewに「trashed_products」も一緒に渡すように修正
+        return view('products.index', compact('products', 'trashed_products'));
     }
 
     // 詳細画面
@@ -76,4 +81,23 @@ class ProductController extends Controller {
 
         return redirect("/products/{$product->id}");
     }
+
+    // 削除処理（モデルで SoftDeletes を使っているので、自動的に論理削除になります）
+    public function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->delete();
+
+        return redirect()->route('products.index')->with('flash_message', '商品を削除しました。');
+    }
+
+    // ★新機能：間違えて消した商品を元に戻す（復元）処理
+    public function restore($id)
+    {
+        // onlyTrashed() で「論理削除されたデータだけ」の中から指定のIDを探して復元します
+        Product::onlyTrashed()->findOrFail($id)->restore();
+
+        return redirect()->route('products.index')->with('flash_message', '商品を元に戻しました。');
+    }
 }
+

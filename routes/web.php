@@ -34,6 +34,12 @@ Route::post('/products/store', [ProductController::class, 'store'])->name('produ
 
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
+// 商品削除機能のルーティング追加
+Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+
+// 商品元に戻す機能
+Route::patch('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+
 Route::get('/vendors/create', [VendorController::class, 'create']);
 
 Route::post('/vendors/store', [VendorController::class, 'store'])->name('vendors.store');

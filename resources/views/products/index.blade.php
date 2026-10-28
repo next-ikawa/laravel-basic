@@ -35,6 +35,7 @@
            <th>価格</th>
            <th>作成日時</th>
            <th>更新日時</th>
+           <th>操作</th>
        </tr>
        @forelse($products as $product)
            <tr>
@@ -43,16 +44,58 @@
                <td>{{ $product->price }}</td>
                <td>{{ $product->created_at }}</td>
                <td>{{ $product->updated_at }}</td>
-
-               <!--  データが0件だった場合の表示を指定 -->
+               <!-- ★「操作」のマスを中央揃えにして、中のフォームもブロック化して安定させました -->
+               <td style="text-align: center; vertical-align: middle;">
+                   <form action="{{ route('products.destroy', $product->id) }}" method="POST" onsubmit="return confirm('本当に削除しますか？');" style="margin: 0; display: inline-block;">
+                       @csrf
+                       @method('DELETE')
+                       <button type="submit" style="color: red; cursor: pointer; padding: 2px 8px;">削除</button>
+                   </form>
+               </td>
+           </tr>
        @empty
+           <!--  データが0件だった場合の表示を指定 -->
            <tr>
-               <td colspan="5" style="text-align: center; padding: 20px; color: #666;">
+               <td colspan="6" style="text-align: center; padding: 20px; color: #666;">
                    該当する商品名がございません
                </td>
            </tr>            
        @endforelse       
    </table>
+
+   <!-- ⇩⇩⇩ ★ここから新しく「ゴミ箱（復元エリア）」を追加しました ★ ⇩⇩⇩ -->
+   <h2 style="margin-top: 40px; color: #666;">削除済みの商品（ゴミ箱）</h2>
+   <table border="1" style="border-collapse: collapse; width: 100%; border-color: #ccc; background-color: #fafafa;">
+       <tr style="background-color: #eee; color: #555;">
+           <th>ID</th>
+           <th>商品名</th>
+           <th>価格</th>
+           <th>操作</th>
+       </tr>
+       @forelse($trashed_products as $trashed)
+           <tr>
+               <td>{{ $trashed->id }}</td>
+               <td style="color: #888; text-decoration: line-through;">{{ $trashed->product_name }}</td>
+               <td>{{ $trashed->price }}</td>
+               <td style="text-align: center; vertical-align: middle;">
+                   <!-- 元に戻す（復元）ボタンのフォーム -->
+                   <form action="{{ route('products.restore', $trashed->id) }}" method="POST" style="margin: 0; display: inline-block;">
+                       @csrf
+                       @method('PATCH')
+                       <button type="submit" style="color: green; cursor: pointer; padding: 2px 8px;">元に戻す</button>
+                   </form>
+               </td>
+           </tr>
+       @empty
+           <tr>
+               <td colspan="4" style="text-align: center; padding: 15px; color: #999;">
+                   ゴミ箱は空です
+               </td>
+           </tr>
+       @endforelse
+   </table>
+   <!-- ⇧⇧⇧ ★ここまで追加 ★ ⇧⇧⇧ -->
+
 </body>
 
 </html>
